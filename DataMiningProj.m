@@ -115,7 +115,9 @@ refined_mat = (refined_mat(:,2:end) - repmat( mean(refined_mat(:,2:end)),objects
 
 %% Regressive SVM
 % Model with conditioned data, binary catagories
-model = fitrsvm(refined_mat(1:1200,2:end-1), refined_mat(1:1200,end));
+%for C = 1:50
+C = 10;
+model = fitrsvm(refined_mat(1:1200,2:end-1), refined_mat(1:1200,end),'BoxConstraint',C*.1);
 cvmodel = model.crossval();
 for i = 1:10
     norm_solution(i,:) = cvmodel.Trained{i}.predict(refined_mat(1201:end,2:end-1));
@@ -131,19 +133,14 @@ std_saleprice  = std(tab.SalePrice);
 
 sol = norm_solution*std_saleprice + mean_saleprice;
 figure
-test = mean(sol)';
+test = log(mean(sol)');
 grtrth = tab.SalePrice(1201:end);
 plot(test,'.')
 hold on
 plot(grtrth,'.')
 rating = sqrt(mean((log(test+1) - log(grtrth + 1)).^2));
 
-% test to see how the regression performs without doing anything
-% but removing unecessary features.
-rawtab = [num_att_trim str_att_trim tab(:,end)];
-raw_model = fitrsvm(rawtab(1:1200,2:end-1), rawtab(1:1200,end));
-rawtab_cvmodel = raw_model.crossval();
-
+%end
 
 % rmsle(sol,refined_mat(1201:end,end))
 % Normalization & Naive attempt
