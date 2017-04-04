@@ -104,9 +104,10 @@ for i = 1:size(str_att_trim,2)
         end
     end
 end
-
+%%
 refined_mat = [table2array(str_att_num) table2array(num_att_trim) tab.SalePrice];
 refined_tab = [str_att_num, num_att_trim(:,2:end), tab(:,end)];
+refined_mat(:,end) = arrayfun(@log, refined_mat(:,end));
 
 refined_mat = (refined_mat(:,2:end) - repmat( mean(refined_mat(:,2:end)),objects,1))...
                 ./repmat(std(refined_mat(:,2:end)),objects,1);
@@ -127,18 +128,18 @@ plot(mean(norm_solution),'.')
 hold on
 plot(refined_mat(1201:end,end),'.');
 
-% For undoing solution normalization
-mean_saleprice = mean(tab.SalePrice);
-std_saleprice  = std(tab.SalePrice);
+%% For undoing solution normalization
+mean_saleprice = mean(log(tab.SalePrice));
+std_saleprice  = std(log(tab.SalePrice));
 
-sol = norm_solution*std_saleprice + mean_saleprice;
+sol = mean(norm_solution).*std_saleprice' + mean_saleprice';
 figure
-test = log(mean(sol)');
 grtrth = tab.SalePrice(1201:end);
+test = exp(sol);
 plot(test,'.')
 hold on
 plot(grtrth,'.')
-rating = sqrt(mean((log(test+1) - log(grtrth + 1)).^2));
+rating = sqrt(mean((log(test'+1) - log(grtrth + 1)).^2));
 
 %end
 
