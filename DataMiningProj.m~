@@ -105,17 +105,17 @@ for i = 1:size(str_att_trim,2)
     end
 end
 %%
-refined_mat = [table2array(str_att_num) table2array(num_att_trim(:,2:end)) tab.SalePrice];
+refined_mat = [table2array(str_att_num) table2array(num_att_trim) tab.SalePrice];
 refined_tab = [str_att_num, num_att_trim(:,2:end), tab(:,end)];
 %refined_mat(:,end) = arrayfun(@log, refined_mat(:,end));
 %refined_mat(:,[248 252 253 260]) = arrayfun(@log, refined_mat(:,[248 251 252 253 260]));
-for i=244:266
+for i=243:267
     refined_mat(:,i) = boxcox(refined_mat(:,i)+1 - min(refined_mat(:,i)));
 end
 %%
 refined_mat = refined_mat(:,2:end);
-refined_mat(:,244:end) = (refined_mat(:,244:end) - repmat( mean(refined_mat(:,244:end)),objects,1))...
-                ./repmat(std(refined_mat(:,244:end)),objects,1);
+refined_mat(:,243:end) = (refined_mat(:,243:end) - repmat( mean(refined_mat(:,243:end)),objects,1))...
+                ./repmat(std(refined_mat(:,243:end)),objects,1);
             
 
 
