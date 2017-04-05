@@ -10,13 +10,12 @@ if ~exist('training_data.mat')
     for i = 1:width(tab)
         if ~isnumeric(table2array(tab(:,i)))
             t_test_samp = table2array(tab(:,i));
-            for j = 1:length(t_test_samp);
+            for j = 1:length(t_test_samp)
                 t_test(j,1) = ~isempty(str2num(t_test_samp{j,1}));
-
             end
-            if sum(t_test) > 0;
+            if sum(t_test) > 0
                 t_cell_fill = cell(1,1);
-                t_cell_fill{1,1} = '0';
+                t_cell_fill{1,1} = 'NaN';
                 t_test_samp(~t_test) = t_cell_fill;
                 t_right_tab = tab(:,(i+1:end));
                 t_left_tab = tab(:,1:i);
@@ -28,6 +27,17 @@ if ~exist('training_data.mat')
             end
         end
     end
+    t_tmp = cell(size(tab,1),1);
+    for i = 1:size(tab,1)   
+        t_tmp{i,1} = num2str(tab{i,2});
+    end
+    t_name = tab.Properties.VariableNames{2};
+    tab(:,2) = [];
+    t_y = tab(:,end);
+    tab(:,end) = [];
+    tab{:,end+1} = t_tmp;
+    tab.Properties.VariableNames{end} = t_name;
+    tab = [tab t_y];
     clear t_* i j
     save training_data;
 else
@@ -44,6 +54,14 @@ end
 str_attributes = tab(:,strlabels);
 num_attributes = tab(:,~strlabels);
 
+% % Juggling attributes between columns
+% % MSSubClass moved to catagorical 
+% ms_sub_class = num_attributes(:,2);
+% ms_sub_class = table(num2str(ms_sub_class{:,1}),'VariableNames',ms_sub_class.Properties.VariableNames);
+% str_attributes = [str_attributes ms_sub_class];
+% num_attributes(:,2) = [];
+
+
 % Finding missing values and calculating percent missing
 for i = 1:height(str_attributes)
     for j = 1:width(str_attributes)
@@ -51,49 +69,65 @@ for i = 1:height(str_attributes)
     end
 end
 percent_missing_str = sum(tmp)./length(tmp);
-
+clear tmp;
+% selecting attributes that use 0 as a missing value
+sel = zeros(1,width(num_attributes));
+sel(1,[6,7,25,36]) = 1;
 % Calculating missing numerical values (assuming both NaN and 0 are 
 % possible missing entries) 
 for i = 1:height(num_attributes)
     for j = 1:width(num_attributes)
-        tmp1(i,j) = isnan(num_attributes{i,j});
-        tmp2(i,j) = num_attributes{i,j} == 0;
+        if sel(j) == 1 && num_attributes{i,j} == 0
+            num_attributes{i,j} = NaN;
+        end
+        tmp(i,j) = isnan(num_attributes{i,j}) || num_attributes{i,j} == 0;
     end
 end
-clear tmp;
-
-% Filtering for attributes that realistically have 0 as a velid entry
-% (This is a coarse check, but it seems to work)
-sel = max(table2array(num_attributes)) < 10;
-tmp = (tmp1 | tmp2);
-tmp = tmp & ~repmat(sel, size(tmp1,1), 1);
 
 percent_missing_num = sum(tmp)./length(tmp);
 
 % Assumption that if there is more than 20% missing data, the attribute is
 % not worth observing (We might want to look at some combined features here
 % instead of throwing all these away?)
-num_att_trim = num_attributes(:,(percent_missing_num < .15));
-str_att_trim = str_attributes(:,(percent_missing_str < .15));
+num_att_trim = num_attributes(:,(percent_missing_num < .20));
+str_att_trim = str_attributes(:,(percent_missing_str < .20));
+
+% KNNinpute for filling missing data
+num_att_trim_arr = table2array(num_att_trim);
+num_att_trim_arr = knnimpute(num_att_trim_arr',5,'Distance','mahalanobis');
+num_att_trim{:,:} = num_att_trim_arr';
 
 % Generating fresh unique string labels from new catagorical table
-str_att_trim_arr = table2array(str_att_trim);
+%str_att_trim_arr = table2array(str_att_trim);
 str_att_num = num_att_trim(:,1);
 repl = cell(1);
+ordered = zeros(1,size(str_att_trim,2)); % indicator for ordered catagories;
+ordered(1,[18,19,21,22,23,27,30,34,35]) = 1;
 for i = 1:size(str_att_trim,2)
-    catagories{i,1} = unique(str_att_trim_arr(:,i));
+    catagories{i,1} = unique(str_att_trim{:,i});
     if size(catagories{i},1) == 2 % Let dual catagories be binary attrib.
         str_att_num(:,end+1) = table(strcmp(str_att_trim{:,i}, catagories{i}(1))); % store attribute in table
         str_att_num.Properties.VariableNames{end} = ...
             str_att_trim.Properties.VariableNames{i};
-%     elseif size(catagories{i},1) == 3 % Let triple cat be trinary 
-%         repl{1} = 1;
-%         str_att_trim{strcmp(str_att_trim{:,i}, catagories{i}(1)),i} = repl;
-%         repl{1} = 0;
-%         str_att_trim{strcmp(str_att_trim{:,i}, catagories{i}(2)),i} = repl;
-%         repl{1} = -1;
-%         str_att_trim{strcmp(str_att_trim{:,i}, catagories{i}(3)),i} = repl;
-%         str_att_num(:,end+1) = str_att_trim(:,i); % store attribute in table
+%     elseif ordered(i)
+%         for j = size(catagories{i},1)
+%             switch ordered(i)
+%                 case 1
+%                     switch catagories{i}{j}
+%                         case 'NA'
+%                             tmp
+%                         case 'Ex'
+%                         case 'Gd'
+%                         case 'TA'
+%                         case 'Fa'
+%                         case 'Po'
+%                         otherwise
+%                     end    
+%                 case 2
+%                     
+%             end
+%         end
+            
     else % let each catagory be a binary catagory
         tmp = cell(1,size(catagories{i},1));
         for j = 1:size(catagories{i},1)
@@ -133,7 +167,7 @@ std_saleprice  = std(tab.SalePrice);
 
 sol = norm_solution*std_saleprice + mean_saleprice;
 figure
-test = log(mean(sol)');
+test = mean(sol)';
 grtrth = tab.SalePrice(1201:end);
 plot(test,'.')
 hold on
