@@ -94,7 +94,7 @@ str_att_trim = str_attributes(:,(percent_missing_str < .20));
 
 % KNNinpute for filling missing data
 num_att_trim_arr = table2array(num_att_trim);
-num_att_trim_arr = knnimpute(num_att_trim_arr',5,'Distance','mahalanobis');
+num_att_trim_arr = knnimpute(num_att_trim_arr',5,'Distance','euclidean');
 num_att_trim{:,:} = num_att_trim_arr';
 
 % Generating fresh unique string labels from new catagorical table
@@ -150,8 +150,8 @@ refined_mat = (refined_mat(:,2:end) - repmat( mean(refined_mat(:,2:end)),objects
 %% Regressive SVM
 % Model with conditioned data, binary catagories
 %for C = 1:50
-C = 10;
-model = fitrsvm(refined_mat(1:1200,2:end-1), refined_mat(1:1200,end),'BoxConstraint',C*.1);
+C = .1;
+model = fitrsvm(refined_mat(1:1200,2:end-1), refined_mat(1:1200,end),'BoxConstraint',C*.1,'KernelFunction','gaussian');
 cvmodel = model.crossval();
 for i = 1:10
     norm_solution(i,:) = cvmodel.Trained{i}.predict(refined_mat(1201:end,2:end-1));
