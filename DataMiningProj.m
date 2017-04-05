@@ -138,17 +138,18 @@ for i = 1:size(str_att_trim,2)
         end
     end
 end
-refined_mat = [table2array(str_att_num) table2array(num_att_trim(:,2:end)) tab.SalePrice];
-refined_tab = [str_att_num, num_att_trim(:,2:end), tab(:,end)];
-%refined_mat(:,end) = arrayfun(@log, refined_mat(:,end));
-%refined_mat(:,[248 252 253 260]) = arrayfun(@log, refined_mat(:,[248 251 252 253 260]));
-for i=244:266
-    refined_mat(:,i) = boxcox(refined_mat(:,i)+1 - min(refined_mat(:,i)));
-end
 %%
-refined_mat = refined_mat(:,2:end);
-refined_mat(:,244:end) = (refined_mat(:,244:end) - repmat( mean(refined_mat(:,244:end)),objects,1))...
-                ./repmat(std(refined_mat(:,244:end)),objects,1);
+clear tmp
+for i = 1:width(num_att_trim)
+   tmp(:,i) = boxcox(table2array(num_att_trim(:,i))+1 - min(table2array(num_att_trim(:,i))));
+   tmp(:,i) = (tmp(:,i) - mean(tmp(:,i)))./std(tmp(:,i));
+end
+norm_sale = (tab.SalePrice - mean(tab.SalePrice)) ./std(tab.SalePrice);
+refined_mat = [table2array(str_att_num) tmp norm_sale];
+%refined_tab = [str_att_num, num_att_trim(:,2:end), tab(:,end)];
+% refined_mat(:,end) = arrayfun(@log, refined_mat(:,end));
+%refined_mat(:,[248 252 253 260]) = arrayfun(@log, refined_mat(:,[248 251 252 253 260]));
+
             
 
 
@@ -156,34 +157,35 @@ refined_mat(:,244:end) = (refined_mat(:,244:end) - repmat( mean(refined_mat(:,24
 % Model with conditioned data, binary catagories
 %for C = 1:50
 
-C = .1;
-model = fitrsvm(refined_mat(1:1200,2:end-1), refined_mat(1:1200,end),'BoxConstraint',C*.1,'KernelFunction','gaussian');
+C = .01;
+model = fitrsvm(refined_mat(1:1200,2:end-1), refined_mat(1:1200,end),'BoxConstraint',C);
+norm_solution = model.predict(refined_mat(1201:end,2:end-1));
+% cvmodel = model.crossval();
+% for i = 1:10
+%     norm_solution(i,:) = cvmodel.Trained{i}.predict(refined_mat(1201:end,2:end-1));
+% end
 
-cvmodel = model.crossval();
-for i = 1:10
-    norm_solution(i,:) = cvmodel.Trained{i}.predict(refined_mat(1201:end,2:end-1));
-end
-
-plot(mean(norm_solution),'.')
+plot(norm_solution,'.')
 hold on
 plot(refined_mat(1201:end,end),'.');
 
 %% For undoing solution normalization
-%mean_saleprice = mean(log(tab.SalePrice));
-%std_saleprice  = std(log(tab.SalePrice));
+% mean_saleprice = mean(log(tab.SalePrice));
+% std_saleprice  = std(log(tab.SalePrice));
 
 mean_saleprice = mean(tab.SalePrice);
 std_saleprice  = std(tab.SalePrice);
 
-sol = mean(norm_solution).*std_saleprice' + mean_saleprice';
+sol = norm_solution.*std_saleprice' + mean_saleprice';
+% sol = norm_solution.*std_saleprice' + mean_saleprice';
 figure
 grtrth = tab.SalePrice(1201:end);
-%test = exp(sol);
+% test = exp(sol);
 test = sol;
 plot(test,'.')
 hold on
 plot(grtrth,'.')
-rating = sqrt(mean((log(test'+1) - log(grtrth + 1)).^2));
+rating = sqrt(mean((log(test+1) - log(grtrth + 1)).^2));
 
 %end
 
