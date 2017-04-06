@@ -140,12 +140,13 @@ for i = 1:size(str_att_trim,2)
 end
 %%
 clear tmp
+%tmp = table2array(num_att_trim);
 for i = 1:width(num_att_trim)
    tmp(:,i) = boxcox(table2array(num_att_trim(:,i))+1 - min(table2array(num_att_trim(:,i))));
    tmp(:,i) = (tmp(:,i) - mean(tmp(:,i)))./std(tmp(:,i));
 end
 
-% refined_mat(:,end) = arrayfun(@log, refined_mat(:,end));
+%refined_mat(:,end) = arrayfun(@log, refined_mat(:,end));
 
 norm_sale = (tab.SalePrice - mean(tab.SalePrice)) ./std(tab.SalePrice);
 refined_mat = [table2array(str_att_num) tmp norm_sale];
@@ -153,6 +154,8 @@ refined_mat = [table2array(str_att_num) tmp norm_sale];
 
 %refined_mat(:,[248 252 253 260]) = arrayfun(@log, refined_mat(:,[248 251 252 253 260]));
 
+Xnn = refined_mat(1:1200,2:end-1);
+Ynn = refined_mat(1:1200,end);
             
 
 
@@ -169,8 +172,11 @@ norm_solutionS = model.predict(refined_mat(1201:end,2:end-1));
 % end
 t = templateTree('NumPredictorsToSample','all',...
     'PredictorSelection','interaction-curvature','Surrogate','on');
-ens = fitensemble(refined_mat(1:1200,2:end-1),refined_mat(1:1200,end),'LSBoost',1000,'Tree');
+ens = fitensemble(refined_mat(1:1200,2:end-1),refined_mat(1:1200,end),'bag',100,'Tree','Type','regression');
 norm_solutionE = predict(ens, refined_mat(1201:end,2:end-1));
+
+gprMDL = fitrgp(Xnn,Ynn);
+norm_solutionG = predict(gprMDL, refined_mat(1201:end,2:end-1));
 
 
 plot(norm_solutionE,'.')
@@ -178,24 +184,37 @@ hold on
 plot(refined_mat(1201:end,end),'.');
 
 %% For undoing solution normalization
-% mean_saleprice = mean(log(tab.SalePrice));
-% std_saleprice  = std(log(tab.SalePrice));
 
+%log
+%mean_saleprice = mean(log(tab.SalePrice));
+%std_saleprice  = std(log(tab.SalePrice));
+
+%notlog
 mean_saleprice = mean(tab.SalePrice);
 std_saleprice  = std(tab.SalePrice);
 
 solE = norm_solutionE.*std_saleprice' + mean_saleprice';
 solS = norm_solutionS.*std_saleprice' + mean_saleprice';
-figure
-grtrth = tab.SalePrice(1201:end);
-%test = exp(sol);
+solG = norm_solutionG.*std_saleprice' + mean_saleprice';
+
+%not log
 testE = solE;
 testS = solS;
-plot(test,'.')
+testG = solG;
+
+%log
+%testE = exp(solE);
+%testS = exp(solS);
+
+figure
+grtrth = tab.SalePrice(1201:end);
+
+plot(testS,'.')
 hold on
 plot(grtrth,'.')
 ratingEns = sqrt(mean((log(testE+1) - log(grtrth + 1)).^2));
 ratingSVM = sqrt(mean((log(testS+1) - log(grtrth + 1)).^2));
+ratingG = sqrt(mean((log(testG+1) - log(grtrth + 1)).^2));
 
 %end
 
