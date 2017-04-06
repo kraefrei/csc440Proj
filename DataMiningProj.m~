@@ -167,9 +167,8 @@ norm_solutionS = model.predict(refined_mat(1201:end,2:end-1));
 % for i = 1:10
 %     norm_solution(i,:) = cvmodel.Trained{i}.predict(refined_mat(1201:end,2:end-1));
 % end
-t = templateTree('NumPredictorsToSample','all',...
-    'PredictorSelection','interaction-curvature','Surrogate','on');
-ens = fitensemble(refined_mat(1:1200,2:end-1),refined_mat(1:1200,end),'LSBoost',1000,'Tree');
+
+ens = fitensemble(refined_mat(1:1200,2:end-1),refined_mat(1:1200,end), 'Bag',100,'Tree');
 norm_solutionE = predict(ens, refined_mat(1201:end,2:end-1));
 
 
