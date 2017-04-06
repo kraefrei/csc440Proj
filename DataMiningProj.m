@@ -3,10 +3,10 @@ clear; close all; clc;
 % the data file train.csv was first conditioned to remove all spaces 
 % allowing for tableread to properly load the data.
 %
+tabTest = readtable('train.csv');
 if ~exist('training_data.mat')
     tab = readtable('train.csv');
     % This section corrects for numeric data being loaded as a string
-    
     for i = 1:width(tab)
         if ~isnumeric(table2array(tab(:,i)))
             t_test_samp = table2array(tab(:,i));
@@ -140,9 +140,9 @@ for i = 1:size(str_att_trim,2)
 end
 %%
 clear tmp
-%tmp = table2array(num_att_trim);
+tmp = table2array(num_att_trim);
 for i = 1:width(num_att_trim)
-   tmp(:,i) = boxcox(table2array(num_att_trim(:,i))+1 - min(table2array(num_att_trim(:,i))));
+   %tmp(:,i) = boxcox(table2array(num_att_trim(:,i))+1 - min(table2array(num_att_trim(:,i))));
    tmp(:,i) = (tmp(:,i) - mean(tmp(:,i)))./std(tmp(:,i));
 end
 
