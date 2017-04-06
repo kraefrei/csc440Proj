@@ -3,18 +3,21 @@ clear; close all; clc;
 % the data file train.csv was first conditioned to remove all spaces 
 % allowing for tableread to properly load the data.
 %
-tabTest = readtable('train.csv');
+tabTest = readtable('test.csv');
 if ~exist('training_data.mat')
     tab = readtable('train.csv');
     % This section corrects for numeric data being loaded as a string
     for i = 1:width(tab)
         if ~isnumeric(table2array(tab(:,i)))
-            t_test_samp = table2array(tab(:,i));
             if i<width(tabTest)
-                t_test_T = table2array(tabTest(:,i));
+                t_test_sampX = table2array(tabTest(:,i));
             end
+            t_test_samp = table2array(tab(:,i));
             for j = 1:length(t_test_samp)
                 t_test(j,1) = ~isempty(str2num(t_test_samp{j,1}));
+                if j<length(t_test_sampX)
+                    t_testX(j,1) = ~isempty(str2num(t_test_sampX{j,1}));
+                end
             end
             if sum(t_test) > 0
                 t_cell_fill = cell(1,1);
@@ -28,12 +31,32 @@ if ~exist('training_data.mat')
                 t_left_tab.Properties.VariableNames{i} = label;
                 tab = [t_left_tab t_right_tab];
             end
+            if (sum(t_testX) > 0) && (i<width(tabTest))
+                t_cell_fill = cell(1,1);
+                t_cell_fill{1,1} = 'NaN';
+                t_test_sampX(~t_testX) = t_cell_fill;
+                t_right_tab = tabTest(:,(i+1:end));
+                t_left_tab = tabTest(:,1:i);
+                label = t_left_tab.Properties.VariableNames{i};
+                t_left_tab(:,i) = []; % Delete column
+                t_left_tab(:,i) = array2table(cellfun(@str2num, t_test_sampX));
+                t_left_tab.Properties.VariableNames{i} = label;
+                tabTest = [t_left_tab t_right_tab];
+            end
         end
     end
     t_tmp = cell(size(tab,1),1);
     for i = 1:size(tab,1)   
         t_tmp{i,1} = num2str(tab{i,2});
     end
+    
+    t_tmpX = cell(size(tabTest,1),1);
+    for i = 1:size(tabTest,1)   
+        t_tmpX{i,1} = num2str(tabTest{i,2});
+    end
+    
+    tabTest = [tabTest(:,1) tabTest(:,3:end) tabTest(:,2)];
+    
     t_name = tab.Properties.VariableNames{2};
     tab(:,2) = [];
     t_y = tab(:,end);
@@ -56,6 +79,10 @@ end
 % Separating Numeric Atributes from catagorical
 str_attributes = tab(:,strlabels);
 num_attributes = tab(:,~strlabels);
+str_test = tabTest(:,strlabels);
+num_test = tabTest(:,~strlabels);
+for i=1:width(num_test)
+    
 
 % % Juggling attributes between columns
 % % MSSubClass moved to catagorical 
