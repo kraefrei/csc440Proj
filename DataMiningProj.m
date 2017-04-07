@@ -214,7 +214,21 @@ hold on
 plot(refined_mat(1201:end,end),'.');
 
 %% For undoing solution normalization
-
+%scatter of transformed data
+close all
+pca_mat = pca(refined_mat(:,2:end-1));
+twodtrans = refined_mat(:,2:end-1)*pca_mat(:,1:2);
+scatter3(twodtrans(:,1),twodtrans(:,2),tab.SalePrice)
+twodtrans = [twodtrans tab.SalePrice];
+out = kmeans(twodtrans(:,1:2),3,'distance','cosine','replicates',10,'start','sample');
+%end
+out = (out == 1);
+load clusters.mat;
+cluster1 = twodtrans(out,:);
+cluster2 = twodtrans(~out,:);
+scatter3(cluster1(:,1),cluster1(:,2),cluster1(:,3))
+hold on
+scatter3(cluster2(:,1),cluster2(:,2),cluster2(:,3))
 %log
 %mean_saleprice = mean(log(tab.SalePrice));
 %std_saleprice  = std(log(tab.SalePrice));
