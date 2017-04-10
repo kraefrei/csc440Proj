@@ -5,6 +5,15 @@ clear; close all; clc;
 
 [str_att_num, num_att_trim, out, att] = process_data('train.csv');
 [str_att_num_test, num_att_trim_test] = process_data('test.csv', att);
+I = zeros(width(str_att_num),width(str_att_num_test));
+for i = 1:width(str_att_num)
+    for j = 1:width(str_att_num_test)
+        I(i,j) = strcmp(str_att_num.Properties.VariableNames{i},str_att_num_test.Properties.VariableNames{j});
+    end
+end
+ind_missing_train = sum(I);
+ind_missing_test  = sum(I');
+
 % 
 % % tab = readtable('test.csv');
 % if ~exist('training_data.mat')

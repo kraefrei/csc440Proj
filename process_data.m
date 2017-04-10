@@ -64,7 +64,12 @@ end
 objects = size(tab,1);
 % Find the unique labels for each attribute ignoring ID and final cost
 datalabels = cell(width(tab)-2,1);
-for i = 2:width(tab)-1
+if strcmp(var{1},'train')
+    end_lim = width(tab)-1;
+else
+    end_lim = width(tab);
+end
+for i = 2:end_lim
     datalabels{i-1} = unique(table2array(tab(:,i)));
     strlabels(i) = iscell(datalabels{i-1});
 end
@@ -118,7 +123,7 @@ if strcmp(var{1},'train')
     att{2} = percent_missing_str < .20;
 else
     num_att_trim = num_attributes(:,(att{1}));
-    str_att_trim = str_attributes(:,(att{2}(1:end-1)));
+    str_att_trim = str_attributes(:,(att{2}));
 end
 % KNNinpute for filling missing data
 num_att_trim_arr = table2array(num_att_trim);
