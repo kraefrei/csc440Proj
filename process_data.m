@@ -1,16 +1,13 @@
-clear; close all; clc;
-%% Preliminary Data Conditioning
-% the data file train.csv was first conditioned to remove all spaces 
-% allowing for tableread to properly load the data.
-%
-tabTest = readtable('test.csv');
-if ~exist('training_data.mat')
-    tab = readtable('train.csv');
+function [str_att_num, num_att_trim, out, att] = process_data( str, att )
+
+var =  strsplit( str, '.' );
+if ~exist([var{1},'_data','.mat'])
+    tab = readtable(str);
     % This section corrects for numeric data being loaded as a string
     for i = 1:width(tab)
         if ~isnumeric(table2array(tab(:,i)))
-            if i<width(tabTest)
-                t_test_sampX = table2array(tabTest(:,i));
+            if i<width(tab)
+                t_test_sampX = table2array(tab(:,i));
             end
             t_test_samp = table2array(tab(:,i));
             for j = 1:length(t_test_samp)
@@ -31,17 +28,17 @@ if ~exist('training_data.mat')
                 t_left_tab.Properties.VariableNames{i} = label;
                 tab = [t_left_tab t_right_tab];
             end
-            if (sum(t_testX) > 0) && (i<width(tabTest))
+            if (sum(t_testX) > 0) && (i<width(tab))
                 t_cell_fill = cell(1,1);
                 t_cell_fill{1,1} = 'NaN';
                 t_test_sampX(~t_testX) = t_cell_fill;
-                t_right_tab = tabTest(:,(i+1:end));
-                t_left_tab = tabTest(:,1:i);
+                t_right_tab = tab(:,(i+1:end));
+                t_left_tab = tab(:,1:i);
                 label = t_left_tab.Properties.VariableNames{i};
                 t_left_tab(:,i) = []; % Delete column
                 t_left_tab(:,i) = array2table(cellfun(@str2num, t_test_sampX));
                 t_left_tab.Properties.VariableNames{i} = label;
-                tabTest = [t_left_tab t_right_tab];
+                tab = [t_left_tab t_right_tab];
             end
         end
     end
@@ -50,13 +47,6 @@ if ~exist('training_data.mat')
         t_tmp{i,1} = num2str(tab{i,2});
     end
     
-    t_tmpX = cell(size(tabTest,1),1);
-    for i = 1:size(tabTest,1)   
-        t_tmpX{i,1} = num2str(tabTest{i,2});
-    end
-    
-    tabTest = [tabTest(:,1) tabTest(:,3:end) tabTest(:,2)];
-    
     t_name = tab.Properties.VariableNames{2};
     tab(:,2) = [];
     t_y = tab(:,end);
@@ -64,11 +54,13 @@ if ~exist('training_data.mat')
     tab{:,end+1} = t_tmp;
     tab.Properties.VariableNames{end} = t_name;
     tab = [tab t_y];
-    clear t_* i j
-    save training_data;
+    clear t_* i j str label
+    save([var{1},'_data']);
 else
-    load( 'training_data.mat' );
+    load([var{1},'_data','.mat'] );
 end
+
+
 objects = size(tab,1);
 % Find the unique labels for each attribute ignoring ID and final cost
 datalabels = cell(width(tab)-2,1);
@@ -79,10 +71,10 @@ end
 % Separating Numeric Atributes from catagorical
 str_attributes = tab(:,strlabels);
 num_attributes = tab(:,~strlabels);
-str_test = tabTest(:,strlabels);
-num_test = tabTest(:,~strlabels);
-for i=1:width(num_test)
-    
+str_test = tab(:,strlabels);
+num_test = tab(:,~strlabels);
+
+
 
 % % Juggling attributes between columns
 % % MSSubClass moved to catagorical 
@@ -119,9 +111,15 @@ percent_missing_num = sum(tmp)./length(tmp);
 % Assumption that if there is more than 20% missing data, the attribute is
 % not worth observing (We might want to look at some combined features here
 % instead of throwing all these away?)
-num_att_trim = num_attributes(:,(percent_missing_num < .20));
-str_att_trim = str_attributes(:,(percent_missing_str < .20));
-
+if strcmp(var{1},'train')
+    num_att_trim = num_attributes(:,(percent_missing_num < .20));
+    att{1} = percent_missing_num < .20;
+    str_att_trim = str_attributes(:,(percent_missing_str < .20));
+    att{2} = percent_missing_str < .20;
+else
+    num_att_trim = num_attributes(:,(att{1}));
+    str_att_trim = str_attributes(:,(att{2}(1:end-1)));
+end
 % KNNinpute for filling missing data
 num_att_trim_arr = table2array(num_att_trim);
 num_att_trim_arr = knnimpute(num_att_trim_arr',5,'Distance','euclidean');
@@ -168,87 +166,10 @@ for i = 1:size(str_att_trim,2)
         end
     end
 end
-%%
-clear tmp
-tmp = table2array(num_att_trim);
-for i = 1:width(num_att_trim)
-   %tmp(:,i) = boxcox(table2array(num_att_trim(:,i))+1 - min(table2array(num_att_trim(:,i))));
-   tmp(:,i) = (tmp(:,i) - mean(tmp(:,i)))./std(tmp(:,i));
+if sum(strcmp('SalePrice',tab.Properties.VariableNames))
+    out = tab.SalePrice;
+else
+    out = 0;
 end
 
-%refined_mat(:,end) = arrayfun(@log, refined_mat(:,end));
-
-norm_sale = (tab.SalePrice - mean(tab.SalePrice)) ./std(tab.SalePrice);
-refined_mat = [table2array(str_att_num) tmp norm_sale];
-%refined_tab = [str_att_num, num_att_trim(:,2:end), tab(:,end)];
-
-%refined_mat(:,[248 252 253 260]) = arrayfun(@log, refined_mat(:,[248 251 252 253 260]));
-
-Xnn = refined_mat(1:1200,2:end-1);
-Ynn = refined_mat(1:1200,end);
-            
-
-
-%% Regressive SVM
-% Model with conditioned data, binary catagories
-%for C = 1:50
-
-C = .01;
-model = fitrsvm(refined_mat(1:1200,2:end-1), refined_mat(1:1200,end),'BoxConstraint',C);
-norm_solutionS = model.predict(refined_mat(1201:end,2:end-1));
-% cvmodel = model.crossval();
-% for i = 1:10
-%     norm_solution(i,:) = cvmodel.Trained{i}.predict(refined_mat(1201:end,2:end-1));
-% end
-t = templateTree('NumPredictorsToSample','all',...
-    'PredictorSelection','interaction-curvature','Surrogate','on');
-ens = fitensemble(refined_mat(1:1200,2:end-1),refined_mat(1:1200,end),'bag',100,'Tree','Type','regression');
-norm_solutionE = predict(ens, refined_mat(1201:end,2:end-1));
-
-gprMDL = fitrgp(Xnn,Ynn);
-norm_solutionG = predict(gprMDL, refined_mat(1201:end,2:end-1));
-
-
-plot(norm_solutionE,'.')
-hold on
-plot(refined_mat(1201:end,end),'.');
-
-%% For undoing solution normalization
-
-%log
-%mean_saleprice = mean(log(tab.SalePrice));
-%std_saleprice  = std(log(tab.SalePrice));
-
-%notlog
-mean_saleprice = mean(tab.SalePrice);
-std_saleprice  = std(tab.SalePrice);
-
-solE = norm_solutionE.*std_saleprice' + mean_saleprice';
-solS = norm_solutionS.*std_saleprice' + mean_saleprice';
-solG = norm_solutionG.*std_saleprice' + mean_saleprice';
-
-%not log
-testE = solE;
-testS = solS;
-testG = solG;
-
-%log
-%testE = exp(solE);
-%testS = exp(solS);
-
-figure
-grtrth = tab.SalePrice(1201:end);
-
-plot(testS,'.')
-hold on
-plot(grtrth,'.')
-ratingEns = sqrt(mean((log(testE+1) - log(grtrth + 1)).^2));
-ratingSVM = sqrt(mean((log(testS+1) - log(grtrth + 1)).^2));
-ratingG = sqrt(mean((log(testG+1) - log(grtrth + 1)).^2));
-
-%end
-
-% rmsle(sol,refined_mat(1201:end,end))
-% Normalization & Naive attempt
-% TODO: Condition string values with integers and breaking up larger
-% catagories into multiple binary catagories
+end
