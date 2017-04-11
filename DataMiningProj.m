@@ -17,6 +17,8 @@ end
 
 norm_sale = (output - mean(output)) ./std(output);
 refined_mat = [table2array(str_att_num(1:1460,:)) tmp(1:1460,2:end), norm_sale];
+refined_mat_test = [table2array(str_att_num(1461:end,:)) tmp(1461:end,2:end)];
+
 %refined_tab = [str_att_num, num_att_trim(:,2:end), tab(:,end)];
 
 %refined_mat(:,[248 252 253 260]) = arrayfun(@log, refined_mat(:,[248 251 252 253 260]));
@@ -44,7 +46,7 @@ norm_solutionE = predict(ens, refined_mat(1201:1460,2:end-1));
 
 gprMDL = fitrgp(Xnn,Ynn);
 norm_solutionG = predict(gprMDL, refined_mat(1201:1460,2:end-1));
-%test_solutionG = predict(gprMDL, refined_mat(1461:end,2:end-1));
+test_solutionG = predict(gprMDL, refined_mat_test(:,2:end));
 
 plot(norm_solutionE,'.')
 hold on
@@ -66,9 +68,9 @@ load clusters.mat;
 cluster1 = twodtrans(out,:);
 cluster2 = twodtrans(~out,:);
 %cluster3 = twodtrans(out3,:);
-scatter3(cluster1(:,1),cluster1(:,2),cluster1(:,3))
+scatter3(cluster1(:,1),cluster1(:,2),log(cluster1(:,3)))
 hold on
-scatter3(cluster2(:,1),cluster2(:,2),cluster2(:,3))
+scatter3(cluster2(:,1),cluster2(:,2),log(cluster2(:,3)))
 %scatter3(cluster3(:,1),cluster3(:,2),cluster3(:,3))
 %log
 %mean_saleprice = mean(log(num_att_trim.SalePrice));
@@ -81,6 +83,7 @@ std_saleprice  = std(output);
 solE = norm_solutionE.*std_saleprice' + mean_saleprice';
 solS = norm_solutionS.*std_saleprice' + mean_saleprice';
 solG = norm_solutionG.*std_saleprice' + mean_saleprice';
+solG_test = test_solutionG.*std_saleprice' + mean_saleprice';
 
 %not log
 testE = solE;
@@ -94,12 +97,17 @@ testG = solG;
 figure
 grtrth = output(1201:1460);
 
-plot(test_solG,'.')
+plot(solG,'.')
 hold on
 plot(grtrth,'.')
 ratingEns = sqrt(mean((log(testE+1) - log(grtrth + 1)).^2));
 ratingSVM = sqrt(mean((log(testS+1) - log(grtrth + 1)).^2));
 ratingG = sqrt(mean((log(testG+1) - log(grtrth + 1)).^2));
+
+
+%% Test Output to file
+out_mat = [refined_mat_test(:,1) solG_test];
+dlmwrite('reg_solution.csv',out_mat,'precision',20);
 
 %end
 
