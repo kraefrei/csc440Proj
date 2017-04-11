@@ -121,7 +121,7 @@ att{2} = percent_missing_str < .20;
 
 % KNNinpute for filling missing data
 num_att_trim_arr = table2array(num_att_trim);
-num_att_trim_arr = knnimpute(num_att_trim_arr',5,'Distance','euclidean');
+num_att_trim_arr = knnimpute(num_att_trim_arr',5,'Distance','mahalanobis');
 num_att_trim{:,:} = num_att_trim_arr';
 
 % Generating fresh unique string labels from new catagorical table
