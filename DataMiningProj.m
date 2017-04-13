@@ -5,6 +5,8 @@ clear; close all; clc;
 
 [str_att_num, num_att_trim, output] = process_data();
 output = output(output > 0);
+
+log_tform = 1;
 %%
 clear tmp
 tmp = table2array(num_att_trim);
@@ -14,8 +16,12 @@ for i = 1:width(num_att_trim)
 end
 
 %refined_mat(:,end) = arrayfun(@log, refined_mat(:,end));
+if log_tform
+    norm_sale = (log(output) - mean(log(output))) ./std(log(output));
+else
+    norm_sale = (output - mean(output)) ./std(output);  
+end
 
-norm_sale = (output - mean(output)) ./std(output);
 refined_mat = [table2array(str_att_num(1:1460,:)) tmp(1:1460,2:end), norm_sale];
 refined_mat_test = [table2array(str_att_num(1461:end,:)) tmp(1461:end,2:end)];
 
@@ -25,7 +31,7 @@ refined_mat_test = [table2array(str_att_num(1461:end,:)) tmp(1461:end,2:end)];
 
 Xnn = refined_mat(1:1200,2:end-1);
 Ynn = refined_mat(1:1200,end);
-            
+
 
 
 %% Regressive SVM
@@ -55,49 +61,53 @@ plot(refined_mat(1201:1460,end),'.');
 %% For undoing solution normalization
 %scatter of transformed data
 close all
+dim = 20;
 pca_mat = pca(refined_mat(:,2:end-1));
-twodtrans = refined_mat(:,2:end-1)*pca_mat(:,1:2);
+twodtrans = refined_mat(:,2:end-1)*pca_mat(:,1:dim);
 %scatter3(twodtrans(:,1),twodtrans(:,2),out)
 twodtrans = [twodtrans output];
-out = kmeans(twodtrans(:,1:2),2,'distance','cosine','replicates',10,'start','sample');
+out = kmeans(twodtrans(:,1:dim),2,'distance','correlation','replicates',10,'start','sample');
 %end
 out1 = (out == 1);
 out2 = (out == 2);
 %out3 = (out == 3);
-load clusters.mat;
-cluster1 = twodtrans(out,:);
-cluster2 = twodtrans(~out,:);
+%load clusters.mat;
+cluster1 = twodtrans(out1,:);
+cluster2 = twodtrans(out2,:);
 %cluster3 = twodtrans(out3,:);
 scatter3(cluster1(:,1),cluster1(:,2),log(cluster1(:,3)))
 hold on
 scatter3(cluster2(:,1),cluster2(:,2),log(cluster2(:,3)))
 %scatter3(cluster3(:,1),cluster3(:,2),cluster3(:,3))
-%log
-%mean_saleprice = mean(log(num_att_trim.SalePrice));
-%std_saleprice  = std(log(num_att_trim.SalePrice));
-
-%notlog
-mean_saleprice = mean(output);
-std_saleprice  = std(output);
+if log_tform
+    %log
+    mean_saleprice = mean(log(output));
+    std_saleprice  = std(log(output));
+else
+    %notlog
+    mean_saleprice = mean(output);
+    std_saleprice  = std(output);
+end
 
 solE = norm_solutionE.*std_saleprice' + mean_saleprice';
 solS = norm_solutionS.*std_saleprice' + mean_saleprice';
 solG = norm_solutionG.*std_saleprice' + mean_saleprice';
 solG_test = test_solutionG.*std_saleprice' + mean_saleprice';
-
-%not log
-testE = solE;
-testS = solS;
-testG = solG;
-
-%log
-%testE = exp(solE);
-%testS = exp(solS);
-
+if ~log_tform
+    %not log
+    testE = solE;
+    testS = solS;
+    testG = solG;
+else
+    %log
+    testE = exp(solE);
+    testS = exp(solS);
+    testG = exp(solG);
+end
 figure
 grtrth = output(1201:1460);
 
-plot(solG,'.')
+plot(testG,'.')
 hold on
 plot(grtrth,'.')
 ratingEns = sqrt(mean((log(testE+1) - log(grtrth + 1)).^2));
