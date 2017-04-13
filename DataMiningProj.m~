@@ -34,8 +34,9 @@ Ynn = refined_mat(random_train(1:1200),end);
 
 %% Clustering and PCA
 %scatter of transformed data
-clustered = 0;
+clustered = 1;
 N = 3;
+if clustered
 close all
 dim = 20;
 pca_mat = pca(all_data(:,2:end-1));
@@ -56,7 +57,7 @@ scatter3(cluster1(:,1),cluster1(:,2),log(cluster1(:,end)))
 hold on
 scatter3(cluster2(:,1),cluster2(:,2),log(cluster2(:,end)))
 scatter3(cluster3(:,1),cluster3(:,2),log(cluster3(:,end)))
-
+end
 %% Gaussian Process Model
 % Model with conditioned data, binary catagories
 if ~clustered
