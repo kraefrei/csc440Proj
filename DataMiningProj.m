@@ -5,7 +5,6 @@ clear; close all; clc;
 
 [str_att_num, num_att_trim, output] = process_data();
 output = output(output > 0);
-
 log_tform = 1;
 %%
 clear tmp
@@ -31,8 +30,6 @@ all_data = [refined_mat(:,1:end-1);refined_mat_test];
 % 
 % Xnn = refined_mat(random_train(1:1200),2:end-1);
 % Ynn = refined_mat(random_train(1:1200),end);
-Xnn = refined_mat(1:1200,2:end-1);
-Ynn = refined_mat(1:1200,end);
 
 %% Clustering and PCA
 %scatter of transformed data
@@ -59,12 +56,29 @@ hold on
 scatter3(cluster2(:,1),cluster2(:,2),log(cluster2(:,end)))
 scatter3(cluster3(:,1),cluster3(:,2),log(cluster3(:,end)))
 
+toDelete = find(twodtrans(:,1)>6);
+numOutliers = sum(twodtrans(:,1)>6);
+refined_mat(toDelete,:) = [];
+twodtrans(toDelete,:) = [];
+
+%toDelete2 = find(twodtrans(:,2)>7);
+%numOutliers2 = sum(twodtrans(:,2)>7);
+%refined_mat(toDelete2,:) = [];
+%twodtrans(toDelete2,:) = [];
+
+Xnn = refined_mat(1:1200,2:end-1);
+Ynn = refined_mat(1:1200,end);
+holdOutData = refined_mat(1201:end,2:end-1);
+output1 = output;
+output1(toDelete,:) = [];
+%output1(toDelete2,:) = [];
+grtrth = output1(1201:end);
 %% Gaussian Process Model
 % Model with conditioned data, binary catagories
 if ~clustered
 gprMDL_holout = fitrgp(Xnn,Ynn);
 gprMDL_test   = fitrgp(refined_mat(:,2:end-1),refined_mat(:,end)); 
-norm_solutionG = predict(gprMDL_holout, refined_mat(1201:1460,2:end-1));
+norm_solutionG = predict(gprMDL_holout, holdOutData);
 test_solutionG = predict(gprMDL_test, refined_mat_test(:,2:end));
 else
     test_solutionG = zeros(1459,1);
@@ -98,7 +112,6 @@ else
     final = exp(solG_test);
 end
 figure
-grtrth = output(1201:1460);
 
 plot(testG,'.')
 hold on
