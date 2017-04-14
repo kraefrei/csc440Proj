@@ -27,10 +27,12 @@ refined_mat_test = [table2array(str_att_num(1461:end,:)) tmp(1461:end,2:end)];
 all_data = [refined_mat(:,1:end-1);refined_mat_test];
 
 %% Perfomring Random Holdout
-random_train = randperm(1460,1460);
-
-Xnn = refined_mat(random_train(1:1200),2:end-1);
-Ynn = refined_mat(random_train(1:1200),end);
+% random_train = randperm(1460,1460);
+% 
+% Xnn = refined_mat(random_train(1:1200),2:end-1);
+% Ynn = refined_mat(random_train(1:1200),end);
+Xnn = refined_mat(1:1200,2:end-1);
+Ynn = refined_mat(1:1200,end);
 
 %% Clustering and PCA
 %scatter of transformed data
@@ -62,12 +64,13 @@ scatter3(cluster3(:,1),cluster3(:,2),log(cluster3(:,end)))
 if ~clustered
 gprMDL_holout = fitrgp(Xnn,Ynn);
 gprMDL_test   = fitrgp(refined_mat(:,2:end-1),refined_mat(:,end)); 
-norm_solutionG = predict(gprMDL_holout, refined_mat(random_train(1201:1460),2:end-1));
+norm_solutionG = predict(gprMDL_holout, refined_mat(1201:1460,2:end-1));
 test_solutionG = predict(gprMDL_test, refined_mat_test(:,2:end));
 else
     test_solutionG = zeros(1459,1);
     for i = 1:N
-       gpmdl{i} = fitrgp(refined_mat(out(1:1460,i),2:end-1),refined_mat(out(1:1460,i),end));
+       gpmdl_train{i} = fitrgp(refined_mat(out(1:1300,i),2:end-1),refined_mat(out(1:1300,i),end));
+       gpmdl_test{i} = fitrgp(refined_mat(out(1:1460,i),2:end-1),refined_mat(out(1:1460,i),end));
        test_solutionG(out(1461:end,i),1) = predict(gpmdl{i}, refined_mat_test(out(1461:end,i),2:end));
     end
 end
@@ -95,7 +98,7 @@ else
     final = exp(solG_test);
 end
 figure
-grtrth = output(random_train(1201:1460));
+grtrth = output(1201:1460);
 
 plot(testG,'.')
 hold on
