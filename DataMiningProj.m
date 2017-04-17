@@ -34,33 +34,30 @@ all_data = [refined_mat(:,1:end-1);refined_mat_test];
 %% Clustering and PCA
 %scatter of transformed data
 clustered = 0;
-N = 3;
+N = 2;
 close all
 dim = 20;
 pca_mat = pca(all_data(:,2:end-1));
 twodtrans = all_data(:,2:end-1)*pca_mat(:,1:dim);
-%scatter3(twodtrans(:,1),twodtrans(:,2),out)
-out = kmeans(twodtrans(:,1:dim),N,'distance','correlation','replicates',10,'start','sample');
-%end
-out1 = (out == 1);
-out2 = (out == 2);
-out3 = (out == 3);
-out = [out1, out2, out3];
-%load clusters.mat;
 twodtrans = [twodtrans(1:1460,:) output];
-cluster1 = twodtrans(out1(1:1460),:);
-cluster2 = twodtrans(out2(1:1460),:);
-cluster3 = twodtrans(out3(1:1460),:);
-scatter3(cluster1(:,1),cluster1(:,2),log(cluster1(:,end)))
-hold on
-scatter3(cluster2(:,1),cluster2(:,2),log(cluster2(:,end)))
-scatter3(cluster3(:,1),cluster3(:,2),log(cluster3(:,end)))
 
 toDelete = find(twodtrans(:,1)>6);
 numOutliers = sum(twodtrans(:,1)>6);
 refined_mat(toDelete,:) = [];
 twodtrans(toDelete,:) = [];
-
+clear cluster cluster_points out
+close all
+out_tmp = kmeans(twodtrans(:,1:dim),N,'distance','correlation','replicates',10,'start','sample');
+cluster = zeros(1460-numOutliers,2);
+out = zeros(1460-numOutliers,N);
+for i = 1:N
+    out(:,i) = (out_tmp(1:1460-numOutliers) == i);
+    cluster_points = logical(out(1:(1460-numOutliers),i));
+    cluster(cluster_points,1:3) = twodtrans(cluster_points,[1:2,end]);
+    scatter3(cluster(cluster_points,1),cluster(cluster_points,2),log(cluster(cluster_points,end)))
+    hold on
+end
+out = logical(out);
 %toDelete2 = find(twodtrans(:,2)>7);
 %numOutliers2 = sum(twodtrans(:,2)>7);
 %refined_mat(toDelete2,:) = [];
@@ -83,9 +80,10 @@ test_solutionG = predict(gprMDL_test, refined_mat_test(:,2:end));
 else
     test_solutionG = zeros(1459,1);
     for i = 1:N
-       gpmdl_train{i} = fitrgp(refined_mat(out(1:1300,i),2:end-1),refined_mat(out(1:1300,i),end));
-       gpmdl_test{i} = fitrgp(refined_mat(out(1:1460,i),2:end-1),refined_mat(out(1:1460,i),end));
-       test_solutionG(out(1461:end,i),1) = predict(gpmdl{i}, refined_mat_test(out(1461:end,i),2:end));
+       gpmdl_train{i} = fitrgp(refined_mat(out(1:1200,i),2:end-1),refined_mat(out(1:1200,i),end));
+       gpmdl_test{i} = fitrgp(refined_mat(out(:,i),2:end-1),refined_mat(out(:,i),end));
+       norm_solutionG(out(1201:end,i),1) = predict(gpmdl_train{i}, refined_mat(out(1201:end,i),2:end-1));
+       %test_solutionG(out(1461:end,i),1) = predict(gpmdl_test{i}, refined_mat_test(out(1461:end,i),2:end));
     end
 end
 %% For undoing solution normalization
@@ -122,10 +120,3 @@ ratingG = sqrt(mean((log(testG+1) - log(grtrth + 1)).^2));
 %% Test Output to file
 out_mat = [refined_mat_test(:,1) final];
 dlmwrite('reg_solution.csv',out_mat,'precision',20);
-
-%end
-
-% rmsle(sol,refined_mat(1201:end,end))
-% Normalization & Naive attempt
-% TODO: Condition string values with integers and breaking up larger
-% catagories into multiple binary catagories
