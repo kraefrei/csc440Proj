@@ -58,17 +58,17 @@ for i = 1:N
     hold on
 end
 out = logical(out);
-%toDelete2 = find(twodtrans(:,2)>7);
-%numOutliers2 = sum(twodtrans(:,2)>7);
-%refined_mat(toDelete2,:) = [];
-%twodtrans(toDelete2,:) = [];
+toDelete2 = find(twodtrans(:,2)>6);
+numOutliers2 = sum(twodtrans(:,2)>6);
+refined_mat(toDelete2,:) = [];
+twodtrans(toDelete2,:) = [];
 
 Xnn = refined_mat(1:1200,2:end-1);
 Ynn = refined_mat(1:1200,end);
 holdOutData = refined_mat(1201:end,2:end-1);
 output1 = output;
 output1(toDelete,:) = [];
-%output1(toDelete2,:) = [];
+output1(toDelete2,:) = [];
 grtrth = output1(1201:end);
 %% Gaussian Process Model
 % Model with conditioned data, binary catagories
