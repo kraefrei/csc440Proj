@@ -33,12 +33,12 @@ all_data = [refined_mat(:,1:end-1);refined_mat_test];
 
 %% Clustering and PCA
 %scatter of transformed data
-clustered = 1;
-N = 3;
+clustered = 0;
+N = 2;
 close all
 dim = 20;
-pca_mat = pca(all_data(:,2:end-1));
-twodtrans = all_data(:,2:end-1)*pca_mat(:,1:dim);
+pca_mat = pca(all_data(:,2:end));
+twodtrans = all_data(:,2:end)*pca_mat(:,1:dim);
 twodtrans = [twodtrans(1:1460,:) output];
 
 toDelete = find(twodtrans(:,1)>6);
@@ -58,18 +58,34 @@ for i = 1:N
     hold on
 end
 out = logical(out);
-%toDelete2 = find(twodtrans(:,2)>7);
-%numOutliers2 = sum(twodtrans(:,2)>7);
-%refined_mat(toDelete2,:) = [];
-%twodtrans(toDelete2,:) = [];
+toDelete2 = find(twodtrans(:,2)>6);
+numOutliers2 = sum(twodtrans(:,2)>6);
+refined_mat(toDelete2,:) = [];
+twodtrans(toDelete2,:) = [];
+
+output1 = output;
+output1(toDelete,:) = [];
+output1(toDelete2,:) = [];
+grtrth = output1(1201:end);
+
+%%
+%Add Interactions
+inter1 = refined_mat(:,271).*refined_mat(:,273);
+inter2 = refined_mat(:,271).*refined_mat(:,274);
+inter3 = refined_mat(:,271).*refined_mat(:,278);
+inter4 = refined_mat(:,280).*refined_mat(:,282);
+
+refined_mat = [refined_mat(:,1:end-1) inter1 inter2 inter3 inter4 refined_mat(:,end)];
+
+inter1T = refined_mat_test(:,271).*refined_mat_test(:,273);
+inter2T = refined_mat_test(:,271).*refined_mat_test(:,274);
+inter3T = refined_mat_test(:,271).*refined_mat_test(:,278);
+inter4T = refined_mat_test(:,280).*refined_mat_test(:,282);
+refined_mat_test = [refined_mat_test(:,1:end-1) refined_mat_test(:,end) inter1T inter2T inter3T inter4T ];
 
 Xnn = refined_mat(1:1200,2:end-1);
 Ynn = refined_mat(1:1200,end);
 holdOutData = refined_mat(1201:end,2:end-1);
-output1 = output;
-output1(toDelete,:) = [];
-%output1(toDelete2,:) = [];
-grtrth = output1(1201:end);
 %% Gaussian Process Model
 % Model with conditioned data, binary catagories
 if ~clustered
@@ -82,8 +98,8 @@ else
     for i = 1:N
        gpmdl_train{i} = fitrgp(refined_mat(out(1:1200,i),2:end-1),refined_mat(out(1:1200,i),end));
        gpmdl_test{i} = fitrgp(refined_mat(out(:,i),2:end-1),refined_mat(out(:,i),end));
-       norm_solutionG(out(1201:end,i),1) = predict(gpmdl_train{i}, refined_mat(out(1461:end,i),2:end));
-       test_solutionG(out(1461:end,i),1) = predict(gpmdl_test{i}, refined_mat_test(out(1461:end,i),2:end));
+       norm_solutionG(out(1201:end,i),1) = predict(gpmdl_train{i}, refined_mat(out(1201:end,i),2:end-1));
+       %test_solutionG(out(1461:end,i),1) = predict(gpmdl_test{i}, refined_mat_test(out(1461:end,i),2:end));
     end
 end
 %% For undoing solution normalization

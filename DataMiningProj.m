@@ -37,8 +37,8 @@ clustered = 0;
 N = 2;
 close all
 dim = 20;
-pca_mat = pca(all_data(:,2:end-1));
-twodtrans = all_data(:,2:end-1)*pca_mat(:,1:dim);
+pca_mat = pca(all_data(:,2:end));
+twodtrans = all_data(:,2:end)*pca_mat(:,1:dim);
 twodtrans = [twodtrans(1:1460,:) output];
 
 toDelete = find(twodtrans(:,1)>6);
@@ -63,13 +63,40 @@ numOutliers2 = sum(twodtrans(:,2)>6);
 refined_mat(toDelete2,:) = [];
 twodtrans(toDelete2,:) = [];
 
-Xnn = refined_mat(1:1200,2:end-1);
-Ynn = refined_mat(1:1200,end);
-holdOutData = refined_mat(1201:end,2:end-1);
 output1 = output;
 output1(toDelete,:) = [];
 output1(toDelete2,:) = [];
 grtrth = output1(1201:end);
+
+% %%
+% %Add Interactions
+% inter1 = refined_mat(:,271).*refined_mat(:,273);
+% inter2 = refined_mat(:,271).*refined_mat(:,274);
+% inter3 = refined_mat(:,271).*refined_mat(:,278);
+% inter4 = refined_mat(:,280).*refined_mat(:,282);
+% inter5 = refined_mat(:,281).*refined_mat(:,282);
+% inter6 = refined_mat(:,281).*refined_mat(:,283);
+% inter7 = refined_mat(:,281).*refined_mat(:,284);
+% inter8 = refined_mat(:,282).*refined_mat(:,284);
+% inter9 = refined_mat(:,283).*refined_mat(:,284);
+% 
+% refined_mat = [refined_mat(:,1:end-1) inter1 inter2 inter3 inter4 inter5 inter6 inter7 inter8 inter9 refined_mat(:,end)];
+% 
+% inter1T = refined_mat_test(:,271).*refined_mat_test(:,273);
+% inter2T = refined_mat_test(:,271).*refined_mat_test(:,274);
+% inter3T = refined_mat_test(:,271).*refined_mat_test(:,278);
+% inter4T = refined_mat_test(:,280).*refined_mat_test(:,282);
+% inter5T = refined_mat_test(:,281).*refined_mat_test(:,282);
+% inter6T = refined_mat_test(:,281).*refined_mat_test(:,283);
+% inter7T = refined_mat_test(:,281).*refined_mat_test(:,284);
+% inter8T = refined_mat_test(:,282).*refined_mat_test(:,284);
+% inter9T = refined_mat_test(:,283).*refined_mat_test(:,284);
+% 
+% refined_mat_test = [refined_mat_test inter1T inter2T inter3T inter4T inter5T inter6T inter7T inter8T inter9T];
+% 
+Xnn = refined_mat(1:1200,2:end-1);
+Ynn = refined_mat(1:1200,end);
+holdOutData = refined_mat(1201:end,2:end-1);
 %% Gaussian Process Model
 % Model with conditioned data, binary catagories
 if ~clustered
