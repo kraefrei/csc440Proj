@@ -89,9 +89,9 @@ Ynn = refined_mat(1:1200,end);
 holdOutData = refined_mat(1201:end,2:end-1);
 
 %%FEATURESELECTION%%%%%%%%
-fun = @(Xtrain,Ytrain,Xtest,Ytest) sqrt(mean((log(predict((fitrgp(Xtrain,Ytrain)),Xtest)) - log(Ytest)).^2));
-options = statset('MaxIter',10);
-[fs,history] = sequentialfs(fun,refined_mat(:,2:end-1),refined_mat(:,end),'options',options);
+%fun = @(Xtrain,Ytrain,Xtest,Ytest) sqrt(mean((log(predict((fitrgp(Xtrain,Ytrain)),Xtest)) - log(Ytest)).^2));
+%options = statset('MaxIter',10);
+%[fs,history] = sequentialfs(fun,refined_mat(:,2:end-1),refined_mat(:,end),'options',options);
 %% Gaussian Process Model
 % Model with conditioned data, binary catagories
 if ~clustered
@@ -99,6 +99,7 @@ gprMDL_holout = fitrgp(Xnn,Ynn);
 gprMDL_test   = fitrgp(refined_mat(:,2:end-1),refined_mat(:,end)); 
 norm_solutionG = predict(gprMDL_holout, holdOutData);
 test_solutionG = predict(gprMDL_test, refined_mat_test(:,2:end));
+
 else
     test_solutionG = zeros(1459,1);
     for i = 1:N
@@ -108,6 +109,21 @@ else
        %test_solutionG(out(1461:end,i),1) = predict(gpmdl_test{i}, refined_mat_test(out(1461:end,i),2:end));
     end
 end
+
+%% Lasso Fitting
+[lasso_holout,fitInfo1] = lasso(Xnn,Ynn,'CV',10);
+[lasso_test,fitInfo2] = lasso(refined_mat(:,2:end-1),refined_mat(:,end),'CV',10);
+%% Ridge Fitting
+kt = 0:1e-5:5e-3;
+ridge_holout = ridge(Ynn,Xnn,kt,0);
+ridge_test = ridge(refined_mat(:,end),refined_mat(:,2:end-1),kt,0);
+%%
+norm_solutionL = (holdOutData)*(lasso_holout(:,63));
+test_solutionL = (refined_mat_test(:,2:end))*(lasso_test(:,62));
+
+colselect = 500;
+norm_solutionR = (holdOutData)*(ridge_holout(2:end,colselect))+(ridge_holout(1,colselect));
+test_solutionR = (refined_mat_test(:,2:end))*(ridge_test(2:end,colselect))+(ridge_test(1,colselect));
 %% For undoing solution normalization
 
 if log_tform
@@ -122,23 +138,48 @@ end
 
 solG = norm_solutionG.*std_saleprice' + mean_saleprice';
 solG_test = test_solutionG.*std_saleprice' + mean_saleprice';
+
+solL = norm_solutionL.*std_saleprice' + mean_saleprice';
+solL_test = test_solutionL.*std_saleprice' + mean_saleprice';
+
+solR = norm_solutionR.*std_saleprice' + mean_saleprice';
+solR_test = test_solutionR.*std_saleprice' + mean_saleprice';
+
 if ~log_tform
     %not log
     testG = solG;
     final = solG_test;
+    
+    testL = solL;
+    finalL = solL_test;
+    
+     testR = solR;
+     finalR = solR_test;
 else
     %log
     testG = exp(solG);
     final = exp(solG_test);
+    
+    testL = exp(solL);
+    finalL = exp(solL_test);
+    
+     testR = exp(solR);
+     finalR = exp(solR_test);
 end
 figure
 
+finalAVG = (finalR+final+finalL)/3;
+testAVG = (testR+testG+testL)/3;
 plot(testG,'.')
 hold on
 plot(grtrth,'.')
 ratingG = sqrt(mean((log(testG+1) - log(grtrth + 1)).^2));
-
-
+ratingL = sqrt(mean((log(testL+1) - log(grtrth + 1)).^2));
+ratingAVG = sqrt(mean((log(testAVG+1) - log(grtrth + 1)).^2));
+ratingR = sqrt(mean((log(testR+1) - log(grtrth + 1)).^2));
 %% Test Output to file
 out_mat = [refined_mat_test(:,1) final];
 dlmwrite('reg_solution.csv',out_mat,'precision',20);
+
+out_matAVG = [refined_mat_test(:,1) finalAVG];
+dlmwrite('reg_solutionAVG.csv',out_matAVG,'precision',20);
