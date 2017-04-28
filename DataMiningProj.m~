@@ -10,7 +10,7 @@ log_tform = 1;
 clear tmp
 tmp = table2array(num_att_trim);
 for i = 1:width(num_att_trim)
-   %tmp(:,i) = boxcox(table2array(num_att_trim(:,i))+1 - min(table2array(num_att_trim(:,i))));
+   tmp(:,i) = boxcox(table2array(num_att_trim(:,i))+1 - min(table2array(num_att_trim(:,i))));
    tmp(:,i) = (tmp(:,i) - mean(tmp(:,i)))./std(tmp(:,i));
 end
 
@@ -168,7 +168,7 @@ else
 end
 figure
 
-finalAVG = (finalR+final+finalG)/3;
+finalAVG = (finalR+final+finalL)/3;
 testAVG = (testR+testG+testL)/3;
 plot(testG,'.')
 hold on

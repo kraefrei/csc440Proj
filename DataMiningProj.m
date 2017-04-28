@@ -10,7 +10,7 @@ log_tform = 1;
 clear tmp
 tmp = table2array(num_att_trim);
 for i = 1:width(num_att_trim)
-   %tmp(:,i) = boxcox(table2array(num_att_trim(:,i))+1 - min(table2array(num_att_trim(:,i))));
+   tmp(:,i) = boxcox(table2array(num_att_trim(:,i))+1 - min(table2array(num_att_trim(:,i))));
    tmp(:,i) = (tmp(:,i) - mean(tmp(:,i)))./std(tmp(:,i));
 end
 
@@ -118,8 +118,8 @@ kt = 0:1e-5:5e-3;
 ridge_holout = ridge(Ynn,Xnn,kt,0);
 ridge_test = ridge(refined_mat(:,end),refined_mat(:,2:end-1),kt,0);
 %%
-norm_solutionL = (holdOutData)*(lasso_holout(:,63));
-test_solutionL = (refined_mat_test(:,2:end))*(lasso_test(:,62));
+norm_solutionL = (holdOutData)*(lasso_holout(:,fitInfo1.Index1SE));
+test_solutionL = (refined_mat_test(:,2:end))*(lasso_test(:,fitInfo2.Index1SE));
 
 colselect = 500;
 norm_solutionR = (holdOutData)*(ridge_holout(2:end,colselect))+(ridge_holout(1,colselect));
