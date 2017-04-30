@@ -10,7 +10,7 @@ log_tform = 1;
 clear tmp
 tmp = table2array(num_att_trim);
 for i = 1:width(num_att_trim)
-   tmp(:,i) = boxcox(table2array(num_att_trim(:,i))+1 - min(table2array(num_att_trim(:,i))));
+   tmp(:,i) = boxcox(table2array(num_att_trim(:,i))+0.1);
    tmp(:,i) = (tmp(:,i) - mean(tmp(:,i)))./std(tmp(:,i));
 end
 
@@ -86,17 +86,36 @@ grtrth = output1(1201:end);
 
 Xnn = refined_mat(1:1200,2:end-1);
 Ynn = refined_mat(1:1200,end);
-holdOutData = refined_mat(1201:end,2:end-1);
 
 %%FEATURESELECTION%%%%%%%%
 %fun = @(Xtrain,Ytrain,Xtest,Ytest) sqrt(mean((log(predict((fitrgp(Xtrain,Ytrain)),Xtest)) - log(Ytest)).^2));
 %options = statset('MaxIter',10);
 %[fs,history] = sequentialfs(fun,refined_mat(:,2:end-1),refined_mat(:,end),'options',options);
+%% Lasso Fitting
+[lasso_holout,fitInfo1] = lasso(Xnn,Ynn,'CV',5);
+[lasso_test,fitInfo2] = lasso(refined_mat(:,2:end-1),refined_mat(:,end),'CV',5);
+%Delete columns where lasscoefficient is 0
+toDeleteLasso = find(lasso_test(:,fitInfo2.Index1SE)==0);
+for i=1:286
+    if (abs(pca_mat(i,1)))>0.01
+        tempRemove = find(toDeleteLasso==i);
+        toDeleteLasso(tempRemove,:)=[];
+    end
+end
+toDeleteLasso((find(toDeleteLasso>268)),:)=[];
+Xnn(:,toDeleteLasso) = [];
+toDeleteLasso_rf = toDeleteLasso+1;
+refined_mat(:,toDeleteLasso_rf)=[];
+refined_mat_test(:,toDeleteLasso_rf)=[];
+[lasso_holout2,fitInfo12] = lasso(Xnn,Ynn,'CV',5);
+[lasso_test2,fitInfo22] = lasso(refined_mat(:,2:end-1),refined_mat(:,end),'CV',5);
+
+holdOutData = refined_mat(1201:end,2:end-1);
 %% Gaussian Process Model
 % Model with conditioned data, binary catagories
 if ~clustered
-gprMDL_holout = fitrgp(Xnn,Ynn);
-gprMDL_test   = fitrgp(refined_mat(:,2:end-1),refined_mat(:,end)); 
+gprMDL_holout = fitrgp(Xnn,Ynn,'Sigma',10.27524);
+gprMDL_test   = fitrgp(refined_mat(:,2:end-1),refined_mat(:,end),'Sigma',10.24804); 
 norm_solutionG = predict(gprMDL_holout, holdOutData);
 test_solutionG = predict(gprMDL_test, refined_mat_test(:,2:end));
 
@@ -109,19 +128,15 @@ else
        %test_solutionG(out(1461:end,i),1) = predict(gpmdl_test{i}, refined_mat_test(out(1461:end,i),2:end));
     end
 end
-
-%% Lasso Fitting
-[lasso_holout,fitInfo1] = lasso(Xnn,Ynn,'CV',10);
-[lasso_test,fitInfo2] = lasso(refined_mat(:,2:end-1),refined_mat(:,end),'CV',10);
 %% Ridge Fitting
-kt = 0:1e-5:5e-3;
+kt = 0:.00005:.005;
 ridge_holout = ridge(Ynn,Xnn,kt,0);
 ridge_test = ridge(refined_mat(:,end),refined_mat(:,2:end-1),kt,0);
 %%
-norm_solutionL = (holdOutData)*(lasso_holout(:,fitInfo1.Index1SE));
-test_solutionL = (refined_mat_test(:,2:end))*(lasso_test(:,fitInfo2.Index1SE));
+norm_solutionL = (holdOutData)*(lasso_holout2(:,fitInfo12.Index1SE));
+test_solutionL = (refined_mat_test(:,2:end))*(lasso_test2(:,fitInfo22.Index1SE));
 
-colselect = 500;
+colselect = 1;
 norm_solutionR = (holdOutData)*(ridge_holout(2:end,colselect))+(ridge_holout(1,colselect));
 test_solutionR = (refined_mat_test(:,2:end))*(ridge_test(2:end,colselect))+(ridge_test(1,colselect));
 %% For undoing solution normalization
@@ -168,18 +183,42 @@ else
 end
 figure
 
-finalAVG = (finalR+final+finalL)/3;
-testAVG = (testR+testG+testL)/3;
+finalRG = (finalR+final)/2;
+finalRL = (finalR+finalL)/2;
+finalLG = (final+finalL)/2;
+finalRLG = (finalR+finalL+final)/3;
+testRG = (testR+testG)/2;
+testRL = (testR+testL)/2;
+testLG = (testG+testL)/2;
+testRLG = (testR+testG+testL)/3;
 plot(testG,'.')
 hold on
 plot(grtrth,'.')
 ratingG = sqrt(mean((log(testG+1) - log(grtrth + 1)).^2));
 ratingL = sqrt(mean((log(testL+1) - log(grtrth + 1)).^2));
-ratingAVG = sqrt(mean((log(testAVG+1) - log(grtrth + 1)).^2));
 ratingR = sqrt(mean((log(testR+1) - log(grtrth + 1)).^2));
+ratingRG = sqrt(mean((log(testRG+1) - log(grtrth + 1)).^2));
+ratingRL = sqrt(mean((log(testRL+1) - log(grtrth + 1)).^2));
+ratingLG = sqrt(mean((log(testLG+1) - log(grtrth + 1)).^2));
+ratingRLG = sqrt(mean((log(testRLG+1) - log(grtrth + 1)).^2));
 %% Test Output to file
-out_mat = [refined_mat_test(:,1) final];
-dlmwrite('reg_solution.csv',out_mat,'precision',20);
+out_matG = [refined_mat_test(:,1) final];
+dlmwrite('reg_solutionG.csv',out_matG,'precision',20);
 
-out_matAVG = [refined_mat_test(:,1) finalAVG];
-dlmwrite('reg_solutionAVG.csv',out_matAVG,'precision',20);
+out_matR = [refined_mat_test(:,1) finalR];
+dlmwrite('reg_solutionR.csv',out_matR,'precision',20);
+
+out_matL = [refined_mat_test(:,1) finalL];
+dlmwrite('reg_solutionL.csv',out_matL,'precision',20);
+
+out_matRG = [refined_mat_test(:,1) finalRG];
+dlmwrite('reg_solutionRG.csv',out_matRG,'precision',20);
+
+out_matRL = [refined_mat_test(:,1) finalRL];
+dlmwrite('reg_solutionRL.csv',out_matRL,'precision',20);
+
+out_matLG = [refined_mat_test(:,1) finalLG];
+dlmwrite('reg_solutionLG.csv',out_matLG,'precision',20);
+
+out_matRLG = [refined_mat_test(:,1) finalRLG];
+dlmwrite('reg_solutionRLG.csv',out_matRLG,'precision',20);
