@@ -66,7 +66,7 @@ twodtrans(toDelete2,:) = [];
 output1 = output;
 output1(toDelete,:) = [];
 output1(toDelete2,:) = [];
-grtrth = output1(1201:end);
+grtrth = output1;%(1201:end);
 
 %%
 % % %Add Interactions
@@ -96,13 +96,13 @@ Ynn = refined_mat(1:1200,end);
 [lasso_test,fitInfo2] = lasso(refined_mat(:,2:end-1),refined_mat(:,end),'CV',5);
 %Delete columns where lasscoefficient is 0
 toDeleteLasso = find(lasso_test(:,fitInfo2.Index1SE)==0);
-for i=1:286
+for i=1:size(all_data,2)-1
     if (abs(pca_mat(i,1)))>0.01
         tempRemove = find(toDeleteLasso==i);
         toDeleteLasso(tempRemove,:)=[];
     end
 end
-toDeleteLasso((find(toDeleteLasso>268)),:)=[];
+toDeleteLasso((find(toDeleteLasso>222)),:)=[];
 Xnn(:,toDeleteLasso) = [];
 toDeleteLasso_rf = toDeleteLasso+1;
 refined_mat(:,toDeleteLasso_rf)=[];
@@ -113,12 +113,14 @@ refined_mat_test(:,toDeleteLasso_rf)=[];
 holdOutData = refined_mat(1201:end,2:end-1);
 %% Gaussian Process Model
 % Model with conditioned data, binary catagories
+folds = 10;
+test_solutionG = zeros(size(refined_mat_test,1),1);
 if ~clustered
-gprMDL_holout = fitrgp(Xnn,Ynn,'Sigma',10.27524);
-gprMDL_test   = fitrgp(refined_mat(:,2:end-1),refined_mat(:,end),'Sigma',10.24804); 
-norm_solutionG = predict(gprMDL_holout, holdOutData);
-test_solutionG = predict(gprMDL_test, refined_mat_test(:,2:end));
-
+gprMDL   = fitrgp(refined_mat(:,2:end-1),refined_mat(:,end),'KFold',folds,'Sigma',10.24804); 
+norm_solutionG = kfoldPredict(gprMDL);
+for i = 1:folds
+    test_solutionG = test_solutionG + predict(gprMDL.Trained{i}, refined_mat_test(:,2:end))./folds;
+end
 else
     test_solutionG = zeros(1459,1);
     for i = 1:N
@@ -187,20 +189,20 @@ finalRG = (finalR+final)/2;
 finalRL = (finalR+finalL)/2;
 finalLG = (final+finalL)/2;
 finalRLG = (finalR+finalL+final)/3;
-testRG = (testR+testG)/2;
+%testRG = (testR+testG)/2;
 testRL = (testR+testL)/2;
-testLG = (testG+testL)/2;
-testRLG = (testR+testG+testL)/3;
-plot(testG,'.')
-hold on
-plot(grtrth,'.')
+%testLG = (testG+testL)/2;
+%testRLG = (testR+testG+testL)/3;
+%plot(testG,'.')
+%hold on
+%plot(grtrth,'.')
 ratingG = sqrt(mean((log(testG+1) - log(grtrth + 1)).^2));
 ratingL = sqrt(mean((log(testL+1) - log(grtrth + 1)).^2));
 ratingR = sqrt(mean((log(testR+1) - log(grtrth + 1)).^2));
-ratingRG = sqrt(mean((log(testRG+1) - log(grtrth + 1)).^2));
+%ratingRG = sqrt(mean((log(testRG+1) - log(grtrth + 1)).^2));
 ratingRL = sqrt(mean((log(testRL+1) - log(grtrth + 1)).^2));
-ratingLG = sqrt(mean((log(testLG+1) - log(grtrth + 1)).^2));
-ratingRLG = sqrt(mean((log(testRLG+1) - log(grtrth + 1)).^2));
+%ratingLG = sqrt(mean((log(testLG+1) - log(grtrth + 1)).^2));
+%ratingRLG = sqrt(mean((log(testRLG+1) - log(grtrth + 1)).^2));
 %% Test Output to file
 out_matG = [refined_mat_test(:,1) final];
 dlmwrite('reg_solutionG.csv',out_matG,'precision',20);

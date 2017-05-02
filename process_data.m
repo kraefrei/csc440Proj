@@ -130,13 +130,14 @@ str_att_num = num_att_trim(:,1);
 repl = cell(1);
 ordered = zeros(1,size(str_att_trim,2)); % indicator for ordered catagories;
 ordered(1,[18,19,21,22,23,27,30,34,35]) = 1;
+order = [18,19,21,22,23,27,30,34,35];
 for i = 1:size(str_att_trim,2)
     catagories{i,1} = unique(str_att_trim{:,i});
     if size(catagories{i},1) == 2 % Let dual catagories be binary attrib.
         str_att_num(:,end+1) = table(strcmp(str_att_trim{:,i}, catagories{i}(1))); % store attribute in table
         str_att_num.Properties.VariableNames{end} = ...
             str_att_trim.Properties.VariableNames{i};
-            
+    %elseif ordered(i) 
     else % let each catagory be a binary catagory
         tmp = cell(1,size(catagories{i},1));
         for j = 1:size(catagories{i},1)
@@ -147,7 +148,30 @@ for i = 1:size(str_att_trim,2)
         end
     end
 end
-
+%handle ordered data
+for i = 1:length(order)
+    temp = zeros(length( str_att_trim{:,order(i)} ),1);
+    name = str_att_trim.Properties.VariableNames{order(i)};
+    for j = 1:length( str_att_trim{:,order(i)} )
+        switch_var = str_att_trim{j,order(i)};
+        switch switch_var{1}
+            case {'Ex'} 
+                temp(j) = 5;
+            case {'Fa'} 
+                temp(j) = 3;
+            case {'Gd'} 
+                temp(j) = 4;
+            case {'Po'} 
+                temp(j) = 1;
+            case {'NA'} 
+                temp(j) = 0;
+            case {'TA'} 
+                temp(j) = 2;
+        end
+    end
+    num_att_trim{:,end+1} = temp;
+    num_att_trim.Properties.VariableNames{end} = name;
+end
 out = tab.SalePrice;
 
 
