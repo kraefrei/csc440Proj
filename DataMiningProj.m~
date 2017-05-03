@@ -197,7 +197,7 @@ figure
 % finalRL = (finalR+finalL)/2;
 % finalLG = (final+finalL)/2;
 % finalRLG = (finalR+finalL+final)/3;
-%testRG = (testR+testG)/2;
+% %testRG = (testR+testG)/2;
 % testRL = (testR+testL)/2;
 % %testLG = (testG+testL)/2;
 % %testRLG = (testR+testG+testL)/3;
@@ -221,8 +221,8 @@ dlmwrite('reg_solutionG.csv',out_matG,'precision',20);
 % out_matL = [refined_mat_test(:,1) finalL];
 % dlmwrite('reg_solutionL.csv',out_matL,'precision',20);
 % 
- out_matRG = [refined_mat_test(:,1) finalRG];
- dlmwrite('reg_solutionRG.csv',out_matRG,'precision',20);
+% out_matRG = [refined_mat_test(:,1) finalRG];
+% dlmwrite('reg_solutionRG.csv',out_matRG,'precision',20);
 % 
 % out_matRL = [refined_mat_test(:,1) finalRL];
 % dlmwrite('reg_solutionRL.csv',out_matRL,'precision',20);
