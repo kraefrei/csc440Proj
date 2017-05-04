@@ -12,7 +12,8 @@ str_att_num = [str_att_num monthdummy];
 lotarea2 = num_att_trim{:,3}.^2;
 overallqual2 = num_att_trim{:,4}.^2;
 overallcond2 = num_att_trim{:,5}.^2;
-addvars = [array2table(lotarea2) array2table(overallqual2) array2table(overallcond2)];
+garagearea2 = num_att_trim{:,11}.^2;
+addvars = [array2table(lotarea2) array2table(garagearea2) array2table(overallqual2) array2table(overallcond2)];
 num_att_trim = [num_att_trim addvars];
 %%
 clear tmp
